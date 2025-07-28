@@ -1,62 +1,117 @@
-﻿package main
+package main
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"submarine-launcher/internal"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	fmt.Println("🚢 Запуск лаунчера Submarine...")
+	// Включаем поддержку цветов в Windows терминале
+	if err := internal.EnableWindowsColors(); err == nil {
+		// Очистка экрана для красивого отображения
+		fmt.Print("\033[2J\033[H")
+	}
+
 	launcherPath, err := os.Executable()
 	if err != nil {
-		internal.ShowExitMessage(internal.Error, "Ошибка при получении пути к исполняемому файлу:", err)
+		internal.ShowStyledMessage("error", "Ошибка при получении пути к исполняемому файлу: "+err.Error())
+		internal.ShowExitMessage(internal.Error, "")
 		return
 	}
 
 	gameDirPath, err := internal.GetGameDirection(launcherPath)
 	if err != nil {
-		internal.ShowExitMessage(internal.Error, "Ошибка при получении директории игры:", err)
+		internal.ShowStyledMessage("error", "Ошибка при получении директории игры: "+err.Error())
+		internal.ShowExitMessage(internal.Error, "")
 		return
 	}
 
+	// Проверяем наличие игры
 	localVersionPath := filepath.Join(gameDirPath, internal.VersionFileName)
+	gameInstalled := true
+	needsUpdate := false
+
 	if _, err := os.Stat(localVersionPath); os.IsNotExist(err) {
-		fmt.Println("Игра не найдена, установить игру? (y/n)")
-		isPlayerAgree := internal.CheckAnswer()
-		if isPlayerAgree {
-			internal.TryUnzipGame(gameDirPath, launcherPath)
-		}
-		internal.ShowExitMessage(internal.Info)
-		return
+		gameInstalled = false
 	} else if err != nil {
-		internal.ShowExitMessage(internal.Error, "Ошибка при проверке версии игры:", err)
+		internal.ShowStyledMessage("error", "Ошибка при проверке версии игры: "+err.Error())
+		internal.ShowExitMessage(internal.Error, "")
 		return
 	}
 
-	localVersion, err := os.ReadFile(localVersionPath)
-	if err != nil {
-		internal.ShowExitMessage(internal.Error, "Ошибка при чтении файла с версией:", err)
-		return
-	}
-	remoteVersion, err := internal.GetRemoteVersion()
-	if err != nil {
-		internal.ShowExitMessage(internal.Error, "Ошибка при проверке удалённой версии:", err)
-		return
-	}
-
-	if string(localVersion) == (remoteVersion) {
-		internal.TryRunGame(gameDirPath)
-		return
-	} else {
-		fmt.Println("Обновить игру перед запуском? (y/n)")
-		isPlayerAgree := internal.CheckAnswer()
-		if isPlayerAgree {
-			internal.TryUnzipGame(gameDirPath, launcherPath)
-			fmt.Println("Игра обновлена до версии", remoteVersion)
+	// Если игра установлена, проверяем обновления
+	if gameInstalled {
+		localVersion, err := os.ReadFile(localVersionPath)
+		if err != nil {
+			internal.ShowStyledMessage("error", "Ошибка при чтении файла с версией: "+err.Error())
+			internal.ShowExitMessage(internal.Error, "")
+			return
 		}
-		internal.TryRunGame(gameDirPath)
+
+		remoteVersion, err := internal.GetRemoteVersion()
+		if err != nil {
+			internal.ShowStyledMessage("warning", "Не удалось проверить обновления, запускаем игру...")
+		} else {
+			needsUpdate = string(localVersion) != remoteVersion
+		}
+	}
+
+	// Создаем и запускаем TUI модель
+	model := internal.NewTUIModel(gameInstalled, needsUpdate)
+	p := tea.NewProgram(model, tea.WithAltScreen())
+
+	finalModel, err := p.Run()
+	if err != nil {
+		internal.ShowStyledMessage("error", "Ошибка интерфейса: "+err.Error())
 		return
 	}
+
+	// Обрабатываем выбор пользователя
+	tuiModel := finalModel.(internal.TUIModel)
+	choice := tuiModel.GetChoice()
+
+	// Очистка экрана после выбора
+	fmt.Print("\033[2J\033[H")
+
+	if !gameInstalled {
+		// Игра не установлена
+		switch choice {
+		case 0: // Установить игру
+			internal.ShowStyledMessage("info", "Начинается установка игры...")
+			internal.TryUnzipGame(gameDirPath, launcherPath)
+			internal.ShowStyledMessage("success", "Игра успешно установлена!")
+		case 1: // Выход
+			internal.ShowStyledMessage("info", "До свидания! 👋")
+			return
+		}
+	} else if needsUpdate {
+		// Игра установлена, но нужно обновление
+		switch choice {
+		case 0: // Обновить игру
+			internal.ShowStyledMessage("info", "Начинается обновление игры...")
+			internal.TryUnzipGame(gameDirPath, launcherPath)
+			internal.ShowStyledMessage("success", "Игра успешно обновлена!")
+			internal.TryRunGame(gameDirPath)
+		case 1: // Запустить игру
+			internal.TryRunGame(gameDirPath)
+		case 2: // Выход
+			internal.ShowStyledMessage("info", "До свидания! 👋")
+			return
+		}
+	} else {
+		// Игра установлена и актуальна
+		switch choice {
+		case 0: // Запустить игру
+			internal.TryRunGame(gameDirPath)
+		case 1: // Выход
+			internal.ShowStyledMessage("info", "До свидания! 👋")
+			return
+		}
+	}
+
+	internal.ShowExitMessage(internal.Info, "")
 }
