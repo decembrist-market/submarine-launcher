@@ -49,6 +49,17 @@ var (
 	successStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#51CF66")).
 			Bold(true)
+
+	// Новые стили для полноэкранного режима
+	containerStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("#0D1117")).
+			Padding(1, 2)
+
+	footerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#484F58")).
+			Align(lipgloss.Center).
+			Border(lipgloss.NormalBorder(), true, false, false, false).
+			BorderForeground(lipgloss.Color("#21262D"))
 )
 
 type MenuChoice int
@@ -67,6 +78,8 @@ type TUIModel struct {
 	needsUpdate   bool
 	status        string
 	statusType    string // "info", "error", "success"
+	width         int    // Ширина терминала
+	height        int    // Высота терминала
 }
 
 func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
@@ -83,8 +96,10 @@ func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
 		cursor:        0,
 		gameInstalled: gameInstalled,
 		needsUpdate:   needsUpdate,
-		status:        "", // Убираем приветственное сообщение
+		status:        "",
 		statusType:    "info",
+		width:         80, // Значение по умолчанию
+		height:        24, // Значение по умолчанию
 	}
 }
 
@@ -94,6 +109,11 @@ func (m TUIModel) Init() tea.Cmd {
 
 func (m TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		// Обновляем размеры при изменении размера окна
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q", "esc":
@@ -114,14 +134,17 @@ func (m TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m TUIModel) View() string {
-	// ASCII лого
-	logo := `
-    ┌─────────────────────────────────────────┐
-    │  🚢 SUBMARINE LAUNCHER 🚢               │
-    │     Подводный мир ждет вас!             │
-    └─────────────────────────────────────────┘`
+	// Создаем главный контейнер
+	container := containerStyle.Width(m.width).Height(m.height)
 
-	s := logoStyle.Render(logo) + "\n"
+	// ASCII лого
+	logo := `🚢 СУБМАРИНА LAUNCHER 🚢`
+
+	// Создаем основной контент
+	content := ""
+
+	// Добавляем логотип
+	content += logoStyle.Width(m.width).Render(logo) + "\n\n"
 
 	// Статус (показываем только если есть сообщение)
 	if m.status != "" {
@@ -134,26 +157,63 @@ func (m TUIModel) View() string {
 		default:
 			statusStyled = statusStyle.Render("ℹ️  " + m.status)
 		}
-		s += "\n" + statusStyled + "\n"
+		content += lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(statusStyled) + "\n\n"
 	}
 
+	// Определяем состояние игры для отображения
+	var gameStatus string
+	if !m.gameInstalled {
+		gameStatus = "🔴 Игра не установлена"
+	} else if m.needsUpdate {
+		gameStatus = "🟡 Доступно обновление"
+	} else {
+		gameStatus = "🟢 Игра готова к запуску"
+	}
+
+	// Отображаем статус игры
+	statusBox := boxStyle.Width(m.width - 10).Render(gameStatus)
+	content += lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(statusBox) + "\n\n"
+
 	// Меню
-	menuBox := "Выберите действие:\n\n"
+	menuTitle := titleStyle.Width(m.width).Render("ВЫБЕРИТЕ ДЕЙСТВИЕ")
+	content += menuTitle + "\n\n"
+
+	// Рендерим меню по центру
+	menu := ""
 	for i, choice := range m.choices {
-		cursor := " "
+		cursor := "  "
 		if m.cursor == i {
-			cursor = "▶"
-			menuBox += selectedItemStyle.Render(cursor+" "+choice) + "\n"
+			cursor = "▶ "
+			menu += selectedItemStyle.Width(30).Align(lipgloss.Center).Render(cursor+choice) + "\n"
 		} else {
-			menuBox += menuItemStyle.Render(cursor+" "+choice) + "\n"
+			menu += menuItemStyle.Width(30).Align(lipgloss.Center).Render(cursor+choice) + "\n"
 		}
 	}
 
-	menuBox += "\n" + statusStyle.Render("Используйте ↑↓ для навигации, Enter для выбора, q для выхода")
+	menuContainer := boxStyle.Width(40).Render(menu)
+	content += lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(menuContainer)
 
-	s += "\n" + boxStyle.Render(menuBox)
+	// Добавляем footer с подсказками
+	footer := footerStyle.Width(m.width).Render("↑/↓ - навигация • Enter - выбрать • Esc/Q - выход")
 
-	return s
+	// Вычисляем сколько пустых строк нужно добавить для центрирования
+	contentHeight := strings.Count(content, "\n") + 3 // +3 для footer
+	emptyLines := (m.height - contentHeight) / 2
+	if emptyLines < 0 {
+		emptyLines = 0
+	}
+
+	// Собираем финальный результат
+	result := strings.Repeat("\n", emptyLines) + content
+
+	// Добавляем footer внизу
+	footerPadding := m.height - strings.Count(result, "\n") - 2
+	if footerPadding > 0 {
+		result += strings.Repeat("\n", footerPadding)
+	}
+	result += footer
+
+	return container.Render(result)
 }
 
 func (m TUIModel) GetChoice() int {

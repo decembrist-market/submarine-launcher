@@ -62,7 +62,7 @@ func main() {
 
 	// Создаем и запускаем TUI модель
 	model := internal.NewTUIModel(gameInstalled, needsUpdate)
-	p := tea.NewProgram(model, tea.WithAltScreen())
+	p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 	finalModel, err := p.Run()
 	if err != nil {
@@ -73,9 +73,6 @@ func main() {
 	// Обрабатываем выбор пользователя
 	tuiModel := finalModel.(internal.TUIModel)
 	choice := tuiModel.GetChoice()
-
-	// Очистка экрана после выбора
-	fmt.Print("\033[2J\033[H")
 
 	if !gameInstalled {
 		// Игра не установлена
