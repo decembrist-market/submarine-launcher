@@ -1,9 +1,9 @@
-﻿package internal
+package internal
 
 var (
-	GameFolderName   string
-	RemoteVersionURL string
-	VersionFileName  string
-	GameFileName     string
-	ArchiveURL       string
+	GameFolderName   = "SubmarineGame"
+	RemoteVersionURL = "https://static.decembrist.org/submarine-game/version.yaml"
+	VersionFileName  = "version.yaml"
+	GameFileName     = "submarine"
+	ArchiveURL       = "https://static.decembrist.org/submarine-game/submarine.zip"
 )
