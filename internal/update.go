@@ -1,4 +1,4 @@
-﻿package internal
+package internal
 
 import (
 	"archive/zip"
@@ -100,7 +100,7 @@ func downloadZip(archiveFile *os.File) error {
 
 	buf := make([]byte, 32*1024)
 	downloaded := 0.0
-	fmt.Printf("\rЗагрузка %s\n", ArchiveURL)
+	ShowStyledMessage("info", "Загрузка архива игры...")
 	for {
 		readBytes, err := resp.Body.Read(buf)
 		if readBytes > 0 {
@@ -109,7 +109,7 @@ func downloadZip(archiveFile *os.File) error {
 				return err2
 			}
 			downloaded += float64(readBytes)
-			drawProgress(downloaded, float64(total))
+			ShowProgress(downloaded, float64(total), "📦 Загружаем")
 		}
 		if err == io.EOF {
 			break
@@ -118,7 +118,8 @@ func downloadZip(archiveFile *os.File) error {
 			return fmt.Errorf("ошибка при чтении данных: %v", err)
 		}
 	}
-	fmt.Println("\nЗагрузка завершена.")
+	fmt.Println()
+	ShowStyledMessage("success", "Загрузка завершена!")
 	return nil
 }
 
@@ -132,7 +133,7 @@ func unzipWithProgress(src, dir string) error {
 	if totalFiles == 0 {
 		totalFiles = 1
 	}
-	fmt.Println("Распаковка архива:")
+	ShowStyledMessage("info", "Распаковка архива...")
 	for i, file := range reader.File {
 		filePath := filepath.Join(dir, file.Name)
 		if file.FileInfo().IsDir() {
@@ -160,8 +161,9 @@ func unzipWithProgress(src, dir string) error {
 		if err != nil {
 			return err
 		}
-		drawProgress(float64(i+1), float64(totalFiles))
+		ShowProgress(float64(i+1), float64(totalFiles), "📂 Распаковываем")
 	}
-	fmt.Println("\nРаспаковка завершена.")
+	fmt.Println()
+	ShowStyledMessage("success", "Распаковка завершена!")
 	return nil
 }
