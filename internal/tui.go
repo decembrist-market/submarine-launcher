@@ -80,6 +80,7 @@ type TUIModel struct {
 	statusType    string // "info", "error", "success"
 	width         int    // Ширина терминала
 	height        int    // Высота терминала
+	selected      bool   // Был ли реально выбран пункт меню
 }
 
 func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
@@ -127,6 +128,7 @@ func (m TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "enter", " ":
+			m.selected = true
 			return m, tea.Quit
 		}
 	}
@@ -218,6 +220,10 @@ func (m TUIModel) View() string {
 
 func (m TUIModel) GetChoice() int {
 	return m.cursor
+}
+
+func (m TUIModel) WasSelected() bool {
+	return m.selected
 }
 
 // Функция для отображения прогресса с красивым стилем

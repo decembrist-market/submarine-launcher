@@ -72,6 +72,9 @@ func main() {
 
 	// Обрабатываем выбор пользователя
 	tuiModel := finalModel.(internal.TUIModel)
+	if !tuiModel.WasSelected() {
+		return
+	}
 	choice := tuiModel.GetChoice()
 
 	if !gameInstalled {
