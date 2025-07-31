@@ -6,4 +6,5 @@ var (
 	VersionFileName  = "version.yaml"
 	GameFileName     = "submarine"
 	ArchiveURL       = "https://static.decembrist.org/submarine-game/submarine.zip"
+	HashURL          = "https://static.decembrist.org/submarine-game/submarine.zip.sha256"
 )

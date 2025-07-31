@@ -28,11 +28,11 @@ func TryRunGame(dataDir string) {
 	if _, err := os.Stat(gameFilePath); err == nil {
 		err := runExecution(gameFilePath)
 		if err != nil {
-			ShowExitMessage(Error, "Ошибка при запуске игры:", err)
+			ShowStyledMessage(Error, "Ошибка при запуске игры: "+err.Error())
 			return
 		}
 	} else {
-		ShowExitMessage(Error, "Файл игры не найден:", fmt.Errorf("путь: %s", gameFilePath))
+		ShowStyledMessage(Error, "Файл игры не найден: "+gameFilePath)
 		return
 	}
 	fmt.Println("Игра запущена")

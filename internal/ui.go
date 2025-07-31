@@ -14,6 +14,7 @@ const (
 	Info       = "Info"
 	Warn       = "Warn"
 	Error      = "Error"
+	Success    = "Success"
 )
 
 func drawProgress(downloaded, total float64) {

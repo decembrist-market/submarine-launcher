@@ -2,10 +2,9 @@ package internal
 
 import (
 	"fmt"
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"strings"
 )
 
 // Стили для интерфейса
@@ -77,7 +76,7 @@ type TUIModel struct {
 	gameInstalled bool
 	needsUpdate   bool
 	status        string
-	statusType    string // "info", "error", "success"
+	statusType    string // Info, Warn, Error, Success
 	width         int    // Ширина терминала
 	height        int    // Высота терминала
 	selected      bool   // Был ли реально выбран пункт меню
@@ -98,7 +97,7 @@ func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
 		gameInstalled: gameInstalled,
 		needsUpdate:   needsUpdate,
 		status:        "",
-		statusType:    "info",
+		statusType:    Info,
 		width:         80, // Значение по умолчанию
 		height:        24, // Значение по умолчанию
 	}
@@ -152,9 +151,9 @@ func (m TUIModel) View() string {
 	if m.status != "" {
 		var statusStyled string
 		switch m.statusType {
-		case "error":
+		case Error:
 			statusStyled = errorStyle.Render("❌ " + m.status)
-		case "success":
+		case Success:
 			statusStyled = successStyle.Render("✅ " + m.status)
 		default:
 			statusStyled = statusStyle.Render("ℹ️  " + m.status)
@@ -255,11 +254,11 @@ func ShowProgress(current, total float64, message string) {
 func ShowStyledMessage(msgType, message string) {
 	var styledMsg string
 	switch msgType {
-	case "error":
+	case Error:
 		styledMsg = errorStyle.Render("❌ " + message)
-	case "success":
+	case Success:
 		styledMsg = successStyle.Render("✅ " + message)
-	case "warning":
+	case Warn:
 		styledMsg = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFD43B")).
 			Bold(true).
