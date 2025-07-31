@@ -39,20 +39,13 @@ func TryRunGame(dataDir string) {
 	os.Exit(0)
 }
 
-func GetGameDirection(launcherPath string) (string, error) {
+func GetGameDirPath(launcherPath string) string {
 	launcherDirPath := filepath.Dir(launcherPath)
 	var gameDirPath string
 	if filepath.Base(launcherDirPath) == GameFolderName {
 		gameDirPath = launcherDirPath
 	} else {
 		gameDirPath = filepath.Join(launcherDirPath, GameFolderName)
-		if _, err := os.Stat(gameDirPath); os.IsNotExist(err) {
-			err := os.Mkdir(gameDirPath, 0755)
-			if err != nil {
-				return "", err
-			}
-			fmt.Println("Папка игры создана.")
-		}
 	}
-	return gameDirPath, nil
+	return gameDirPath
 }

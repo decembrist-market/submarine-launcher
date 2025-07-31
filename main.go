@@ -18,37 +18,40 @@ func main() {
 
 	launcherPath, err := os.Executable()
 	if err != nil {
-		internal.ShowStyledMessage(internal.Error, "Ошибка при получении пути к исполняемому файлу: "+err.Error())
-		internal.ShowExitMessage(internal.Error)
+		internal.ShowExitMessage(internal.Error, "Ошибка при получении пути к исполняемому файлу: "+err.Error())
 		return
 	}
 
-	gameDirPath, err := internal.GetGameDirection(launcherPath)
-	if err != nil {
-		internal.ShowStyledMessage(internal.Error, "Ошибка при получении директории игры: "+err.Error())
-		internal.ShowExitMessage(internal.Error)
-		return
-	}
+	gameDirPath := internal.GetGameDirPath(launcherPath)
 
 	// Проверяем наличие игры
 	localVersionPath := filepath.Join(gameDirPath, internal.VersionFileName)
+	gameDirExist := true
 	gameInstalled := true
 	needsUpdate := false
 
-	if _, err := os.Stat(localVersionPath); os.IsNotExist(err) {
+	if _, err := os.Stat(gameDirPath); os.IsNotExist(err) {
+		gameDirExist = false
 		gameInstalled = false
 	} else if err != nil {
-		internal.ShowStyledMessage(internal.Error, "Ошибка при проверке версии игры: "+err.Error())
-		internal.ShowExitMessage(internal.Error)
+		internal.ShowExitMessage(internal.Error, "Ошибка при проверке папки игры: ")
 		return
+	}
+
+	if gameDirExist {
+		if _, err := os.Stat(localVersionPath); os.IsNotExist(err) {
+			gameInstalled = false
+		} else if err != nil {
+			internal.ShowExitMessage(internal.Error, "Ошибка при проверке версии игры: "+err.Error())
+			return
+		}
 	}
 
 	// Если игра установлена, проверяем обновления
 	if gameInstalled {
 		localVersion, err := os.ReadFile(localVersionPath)
 		if err != nil {
-			internal.ShowStyledMessage(internal.Error, "Ошибка при чтении файла с версией: "+err.Error())
-			internal.ShowExitMessage(internal.Error)
+			internal.ShowExitMessage(internal.Error, "Ошибка при чтении файла с версией: "+err.Error())
 			return
 		}
 
@@ -81,6 +84,13 @@ func main() {
 		// Игра не установлена
 		switch choice {
 		case 0: // Установить игру
+			if !gameDirExist {
+				err := os.Mkdir(gameDirPath, 0755)
+				if err != nil {
+					internal.ShowStyledMessage(internal.Error, "Ошибка: "+err.Error())
+					break
+				}
+			}
 			internal.ShowStyledMessage(internal.Info, "Начинается установка игры...")
 			err = internal.TryUnzipGame(gameDirPath, launcherPath)
 			if err != nil {
@@ -121,5 +131,5 @@ func main() {
 		}
 	}
 
-	internal.ShowExitMessage(internal.Info)
+	internal.ShowExitMessage(internal.Info, "")
 }
