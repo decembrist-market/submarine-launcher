@@ -14,6 +14,7 @@ const (
 	Info       = "Info"
 	Warn       = "Warn"
 	Error      = "Error"
+	Success    = "Success"
 )
 
 func drawProgress(downloaded, total float64) {
@@ -26,26 +27,14 @@ func drawProgress(downloaded, total float64) {
 	fmt.Printf("\r%s %3d%%", bar, percent)
 }
 
-func ShowExitMessage(level string, a ...interface{}) {
-	logMessage(level, a...)
+func ShowExitMessage(level, message string) {
+	if message != "" {
+		ShowStyledMessage(level, message)
+	}
 	fmt.Println("Нажмите Enter для выхода...")
 	fmt.Scanln()
 }
 
-func logMessage(level string, a ...interface{}) {
-	if len(a) > 0 {
-		if len(a) > 0 {
-			switch level {
-			case Info:
-				fmt.Println(a)
-			case Warn:
-				fmt.Println(WarnColor, "⚠️ ", a, ResetColor)
-			case Error:
-				fmt.Println(ErrorColor, "❌ ", a, ResetColor)
-			}
-		}
-	}
-}
 func CheckAnswer() bool {
 	var answer string
 	_, err := fmt.Scanln(&answer)

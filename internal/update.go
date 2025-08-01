@@ -48,17 +48,15 @@ func removeOldFiles(dir, launcherPath string) error {
 	return nil
 }
 
-func TryUnzipGame(dir, updaterPath string) {
+func TryUnzipGame(dir, updaterPath string) error {
 	err := removeOldFiles(dir, updaterPath)
 	if err != nil {
-		fmt.Println("Ошибка при удалении файлов игры:", err)
-		return
+		return fmt.Errorf("ошибка при удалении старых файлов: %v", err)
 	}
 
 	archiveFile, err := os.CreateTemp("", ArchiveNameTemplate)
 	if err != nil {
-		fmt.Println("Ошибка при создании временного файла архива:", err)
-		return
+		return fmt.Errorf("ошибка при создании временного файла архива: %v", err)
 	}
 
 	archivePath := archiveFile.Name()
@@ -72,15 +70,21 @@ func TryUnzipGame(dir, updaterPath string) {
 
 	err = downloadZip(archiveFile)
 	if err != nil {
-		fmt.Println("Ошибка при загрузке архива:", err)
-		return
+		return fmt.Errorf("ошибка при загрузке архива: %v", err)
 	}
+
+	//todo
+	//err = checkHash(archivePath)
+	//if err != nil {
+	//	return fmt.Errorf("ошибка при проверке хеша архива: %v", err)
+	//}
+	//ShowStyledMessage(Info, "Хеш архива успешно проверен")
 
 	err = unzipWithProgress(archivePath, dir)
 	if err != nil {
-		fmt.Println("Ошибка при распаковке архива:", err)
-		return
+		return fmt.Errorf("ошибка при распаковке архива: %v", err)
 	}
+	return nil
 }
 
 func downloadZip(archiveFile *os.File) error {
@@ -100,7 +104,7 @@ func downloadZip(archiveFile *os.File) error {
 
 	buf := make([]byte, 32*1024)
 	downloaded := 0.0
-	ShowStyledMessage("info", "Загрузка архива игры...")
+	ShowStyledMessage(Info, "Загрузка архива игры...")
 	for {
 		readBytes, err := resp.Body.Read(buf)
 		if readBytes > 0 {
@@ -119,7 +123,7 @@ func downloadZip(archiveFile *os.File) error {
 		}
 	}
 	fmt.Println()
-	ShowStyledMessage("success", "Загрузка завершена!")
+	ShowStyledMessage(Success, "Загрузка завершена!")
 	return nil
 }
 
@@ -133,7 +137,7 @@ func unzipWithProgress(src, dir string) error {
 	if totalFiles == 0 {
 		totalFiles = 1
 	}
-	ShowStyledMessage("info", "Распаковка архива...")
+	ShowStyledMessage(Info, "Распаковка архива...")
 	for i, file := range reader.File {
 		filePath := filepath.Join(dir, file.Name)
 		if file.FileInfo().IsDir() {
@@ -164,6 +168,6 @@ func unzipWithProgress(src, dir string) error {
 		ShowProgress(float64(i+1), float64(totalFiles), "📂 Распаковываем")
 	}
 	fmt.Println()
-	ShowStyledMessage("success", "Распаковка завершена!")
+	ShowStyledMessage(Success, "Распаковка завершена!")
 	return nil
 }
