@@ -133,13 +133,18 @@ func unzipWithProgress(src, dir string) error {
 		return err
 	}
 	defer reader.Close()
+
 	totalFiles := len(reader.File)
 	if totalFiles == 0 {
 		totalFiles = 1
 	}
+
 	ShowStyledMessage(Info, "Распаковка архива...")
 	for i, file := range reader.File {
 		filePath := filepath.Join(dir, file.Name)
+
+		ShowProgress(float64(i), float64(totalFiles), "📦 Распаковываем")
+
 		if file.FileInfo().IsDir() {
 			err := os.MkdirAll(filePath, os.ModePerm)
 			if err != nil {
@@ -147,27 +152,150 @@ func unzipWithProgress(src, dir string) error {
 			}
 			continue
 		}
+
 		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 			return err
 		}
-		outFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+
+		fileReader, err := file.Open()
 		if err != nil {
 			return err
 		}
-		readCloser, err := file.Open()
+
+		targetFile, err := os.Create(filePath)
 		if err != nil {
-			outFile.Close()
+			fileReader.Close()
 			return err
 		}
-		_, err = io.Copy(outFile, readCloser)
-		readCloser.Close()
-		outFile.Close()
+
+		_, err = io.Copy(targetFile, fileReader)
+		targetFile.Close()
+		fileReader.Close()
+
 		if err != nil {
 			return err
 		}
-		ShowProgress(float64(i+1), float64(totalFiles), "📂 Распаковываем")
 	}
+
 	fmt.Println()
 	ShowStyledMessage(Success, "Распаковка завершена!")
+	return nil
+}
+
+// downloadZipWithProgress загружает архив с отправкой прогресса в TUI
+func downloadZipWithProgress(archiveFile *os.File, progressChan chan<- InstallProgress) error {
+	resp, err := http.Get(ArchiveURL)
+	if err != nil {
+		return fmt.Errorf("ошибка при загрузке архива: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("сервер вернул статус %d", resp.StatusCode)
+	}
+
+	total := resp.ContentLength
+	if total <= 0 {
+		total = 1
+	}
+
+	buf := make([]byte, 32*1024)
+	downloaded := int64(0)
+
+	for {
+		readBytes, err := resp.Body.Read(buf)
+		if readBytes > 0 {
+			_, err2 := archiveFile.Write(buf[:readBytes])
+			if err2 != nil {
+				return err2
+			}
+			downloaded += int64(readBytes)
+
+			// Рассчитываем прогресс (25-70%)
+			percent := int(float64(downloaded)/float64(total)*45) + 25
+			if percent > 70 {
+				percent = 70
+			}
+
+			progressChan <- InstallProgress{
+				Current: percent,
+				Total:   100,
+				Message: fmt.Sprintf("Загружено: %.1f MB / %.1f MB",
+					float64(downloaded)/(1024*1024),
+					float64(total)/(1024*1024)),
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("ошибка при чтении данных: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// unzipWithProgressTUI распаковывает архив с отправкой прогресса в TUI
+func unzipWithProgressTUI(src, dir string, progressChan chan<- InstallProgress) error {
+	reader, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	totalFiles := len(reader.File)
+	if totalFiles == 0 {
+		totalFiles = 1
+	}
+
+	for i, file := range reader.File {
+		filePath := filepath.Join(dir, file.Name)
+
+		// Рассчитываем прогресс (70-95%)
+		percent := int(float64(i)/float64(totalFiles)*25) + 70
+		if percent > 95 {
+			percent = 95
+		}
+
+		progressChan <- InstallProgress{
+			Current: percent,
+			Total:   100,
+			Message: fmt.Sprintf("Распаковка: %d/%d файлов", i+1, totalFiles),
+		}
+
+		if file.FileInfo().IsDir() {
+			err := os.MkdirAll(filePath, os.ModePerm)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+			return err
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		targetFile, err := os.Create(filePath)
+		if err != nil {
+			fileReader.Close()
+			return err
+		}
+
+		_, err = io.Copy(targetFile, fileReader)
+		targetFile.Close()
+		fileReader.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

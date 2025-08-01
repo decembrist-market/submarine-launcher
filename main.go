@@ -88,31 +88,12 @@ func main() {
 			// Игра не установлена
 			switch choice {
 			case 0: // Установить игру
-				if !gameDirExist {
-					err := os.Mkdir(gameDirPath, 0755)
-					if err != nil {
-						// Показываем ошибку и возвращаемся в меню
-						fmt.Printf("Ошибка создания директории: %s\nНажмите Enter для продолжения...\n", err.Error())
-						fmt.Scanln()
-						continue
-					}
-				}
-
-				// Выходим из TUI режима для установки
-				fmt.Print("\033[2J\033[H") // Очищаем экран
-				fmt.Println("Начинается установка игры...")
-				err = internal.TryUnzipGame(gameDirPath, launcherPath)
+				// Запускаем установку в TUI режиме
+				err = internal.RunInstallationTUI(gameDirPath, launcherPath)
 				if err != nil {
-					// Показываем ошибку и возвращаемся в меню
-					fmt.Printf("Ошибка установки: %s\nНажмите Enter для продолжения...\n", err.Error())
-					fmt.Scanln()
+					// Показываем ошибку в TUI режиме и возвращаемся в меню
 					continue
 				}
-
-				fmt.Println("\n✅ Игра успешно установлена!")
-				fmt.Println("Теперь вы можете запустить игру из меню.")
-				fmt.Print("Нажмите Enter для возврата в меню...")
-				fmt.Scanln()
 				// Продолжаем цикл, чтобы показать обновленное меню
 				continue
 			case 1: // Выход
@@ -122,13 +103,13 @@ func main() {
 			// Игра установлена, но нужно обновление
 			switch choice {
 			case 0: // Обновить игру
-				internal.ShowStyledMessage(internal.Info, "Начинается обновление игры...")
-				err = internal.TryUnzipGame(gameDirPath, launcherPath)
+				// Запускаем обновление в TUI режиме
+				err = internal.RunUpdateTUI(gameDirPath, launcherPath)
 				if err != nil {
-					internal.ShowStyledMessage(internal.Error, "Ошибка: "+err.Error())
+					// Показываем ошибку и возвращаемся в меню
 					continue
 				}
-				internal.ShowStyledMessage(internal.Success, "Игра успешно обновлена!")
+				// После успешного обновления запускаем игру
 				internal.TryRunGame(gameDirPath)
 				shouldExit = true
 			case 1: // Запустить игру
@@ -149,7 +130,7 @@ func main() {
 		}
 
 		if shouldExit {
-			internal.ShowStyledMessage(internal.Info, "До свидания! 👋")
+			internal.ShowStyledMessage(internal.Info, "Выполнен выход! 👋")
 			return
 		}
 	}
