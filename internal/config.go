@@ -3,21 +3,21 @@ package internal
 type GameExecutables struct {
 	Windows string
 	Linux   string
-	Darwin  string // macOS
+	Darwin  string
 }
 
-// Глобальная конфигурация
 var (
+	LauncherVersion  = "0.0.0"
 	GameFolderName   = "SubmarineGame"
 	RemoteVersionURL = "https://static.decembrist.org/submarine-game/version.yaml"
+	LauncherURL      = "https://static.decembrist.org/submarine-game/SubmarineLauncher.exe"
 	VersionFileName  = "version.yaml"
-	GameFileName     = "submarine"
 	ArchiveURL       = "https://static.decembrist.org/submarine-game/submarine.zip"
 	HashURL          = "https://static.decembrist.org/submarine-game/submarine.zip.sha256"
 
 	GameExes = GameExecutables{
-		Windows: "submarine.exe", // Исполняемый файл для Windows
-		Linux:   "submarine",     // Для Linux
-		Darwin:  "submarine",     // Для macOS
+		Windows: "submarine.exe",
+		Linux:   "submarine",
+		Darwin:  "submarine",
 	}
 )

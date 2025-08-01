@@ -22,6 +22,20 @@ func main() {
 		return
 	}
 
+	// Проверяем обновления лаунчера в первую очередь
+	remoteVersionInfo, err := internal.GetRemoteVersionInfo()
+	if err != nil {
+		internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления лаунчера: "+err.Error())
+	} else if internal.NeedsLauncherUpdate(remoteVersionInfo) {
+		internal.ShowStyledMessage(internal.Info, fmt.Sprintf("Найдено обновление лаунчера: %s → %s", internal.LauncherVersion, remoteVersionInfo.Version.Launcher))
+		err = internal.UpdateLauncher(launcherPath)
+		if err != nil {
+			internal.ShowExitMessage(internal.Error, "Ошибка при обновлении лаунчера: "+err.Error())
+			return
+		}
+		// UpdateLauncher завершает процесс, поэтому эта строка не выполнится
+	}
+
 	gameDirPath := internal.GetGameDirPath(launcherPath)
 
 	// Основной цикл лаунчера
@@ -36,7 +50,7 @@ func main() {
 			gameDirExist = false
 			gameInstalled = false
 		} else if err != nil {
-			internal.ShowExitMessage(internal.Error, "Ошибка при проверке папки игры: ")
+			internal.ShowExitMessage(internal.Error, "Ошибка при проверке папки игры: "+err.Error())
 			return
 		}
 
@@ -51,17 +65,16 @@ func main() {
 
 		// Если игра установлена, проверяем обновления
 		if gameInstalled {
-			localVersion, err := os.ReadFile(localVersionPath)
+			localVersionInfo, err := internal.GetLocalVersionInfo(localVersionPath)
 			if err != nil {
 				internal.ShowExitMessage(internal.Error, "Ошибка при чтении файла с версией: "+err.Error())
 				return
 			}
 
-			remoteVersion, err := internal.GetRemoteVersion()
 			if err != nil {
 				internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления, запускаем игру...")
 			} else {
-				needsUpdate = string(localVersion) != remoteVersion
+				needsUpdate = internal.NeedsGameUpdate(localVersionInfo, remoteVersionInfo)
 			}
 		}
 

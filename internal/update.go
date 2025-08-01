@@ -11,23 +11,6 @@ import (
 
 const ArchiveNameTemplate = "submarine-archive-*.zip"
 
-func GetRemoteVersion() (string, error) {
-	resp, err := http.Get(RemoteVersionURL)
-	if err != nil {
-		return "", fmt.Errorf("ошибка при запросе версии: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("сервер вернул статус %d", resp.StatusCode)
-	}
-	remoteVersion, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("ошибка при чтении ответа с сервера: %v", err)
-	}
-	return string(remoteVersion), nil
-}
-
 func removeOldFiles(dir, launcherPath string) error {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
