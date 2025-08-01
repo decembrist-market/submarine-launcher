@@ -112,10 +112,7 @@ func main() {
 				// После успешного обновления запускаем игру
 				internal.TryRunGame(gameDirPath)
 				shouldExit = true
-			case 1: // Запустить игру
-				internal.TryRunGame(gameDirPath)
-				shouldExit = true
-			case 2: // Выход
+			case 1: // Выход
 				shouldExit = true
 			}
 		} else {
@@ -130,7 +127,7 @@ func main() {
 		}
 
 		if shouldExit {
-			internal.ShowStyledMessage(internal.Info, "Выполнен выход! 👋")
+			internal.ShowStyledMessage(internal.Info, "Лаунчер закрыт! 👋")
 			return
 		}
 	}

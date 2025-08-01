@@ -88,7 +88,7 @@ func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
 	if !gameInstalled {
 		choices = []string{"📦 Установить игру", "🚪 Выход"}
 	} else if needsUpdate {
-		choices = []string{"🔄 Обновить игру", "🎮 Запустить игру", "🚪 Выход"}
+		choices = []string{"🔄 Обновить игру", "🚪 Выход"}
 	}
 
 	return TUIModel{
