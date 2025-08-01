@@ -5,30 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 )
 
-// GetExecutableForPlatform возвращает имя исполняемого файла для текущей платформы
-func GetExecutableForPlatform(gameExes GameExecutables) string {
-	switch runtime.GOOS {
-	case "windows":
-		return gameExes.Windows
-	case "linux":
-		return gameExes.Linux
-	case "darwin":
-		return gameExes.Darwin
-	default:
-		return gameExes.Linux // По умолчанию используем Linux версию
-	}
-}
-
-// getExecutableName - устаревшая функция, оставлена для совместимости
-func getExecutableName(baseName string) string {
-	if runtime.GOOS == "windows" {
-		return baseName + ".exe"
-	}
-	return baseName
-}
 func runExecution(path string) error {
 	cmd := exec.Command(path)
 	cmd.Stdout = os.Stdout
@@ -42,7 +20,7 @@ func TryRunGame(dataDir string) {
 	fmt.Print("Запуск игры...\n")
 
 	// Получаем имя исполняемого файла для текущей платформы
-	gameFile := GetExecutableForPlatform(GameExes)
+	gameFile := GetExecutableForPlatform()
 	gamePath := filepath.Join(dataDir, gameFile)
 
 	// Проверяем существование файла и запускаем игру

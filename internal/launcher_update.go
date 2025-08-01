@@ -14,7 +14,7 @@ import (
 func DownloadLauncherUpdate(tempPath string) error {
 	ShowStyledMessage(Info, "Скачиваю обновление лаунчера...")
 
-	resp, err := http.Get(LauncherURL)
+	resp, err := http.Get(GetLauncherURL())
 	if err != nil {
 		return fmt.Errorf("ошибка при скачивании лаунчера: %v", err)
 	}

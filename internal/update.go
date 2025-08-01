@@ -71,7 +71,7 @@ func TryUnzipGame(dir, updaterPath string) error {
 }
 
 func downloadZip(archiveFile *os.File) error {
-	resp, err := http.Get(ArchiveURL)
+	resp, err := http.Get(GetArchiveURL())
 	if err != nil {
 		return fmt.Errorf("ошибка при загрузке архива: %v", err)
 	}
@@ -167,7 +167,7 @@ func unzipWithProgress(src, dir string) error {
 
 // downloadZipWithProgress загружает архив с отправкой прогресса в TUI
 func downloadZipWithProgress(archiveFile *os.File, progressChan chan<- InstallProgress) error {
-	resp, err := http.Get(ArchiveURL)
+	resp, err := http.Get(GetArchiveURL())
 	if err != nil {
 		return fmt.Errorf("ошибка при загрузке архива: %v", err)
 	}

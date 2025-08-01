@@ -23,8 +23,10 @@ func checkHash(archivePath string) error {
 	}
 	return nil
 }
+
 func downloadRemoteHash() (string, error) {
-	resp, err := http.Get(HashURL)
+	hashUrl := GetHashURL()
+	resp, err := http.Get(hashUrl)
 	if err != nil {
 		return "", err
 	}
