@@ -1,4 +1,4 @@
-﻿package internal
+package internal
 
 import (
 	"fmt"
@@ -8,6 +8,21 @@ import (
 	"runtime"
 )
 
+// GetExecutableForPlatform возвращает имя исполняемого файла для текущей платформы
+func GetExecutableForPlatform(gameExes GameExecutables) string {
+	switch runtime.GOOS {
+	case "windows":
+		return gameExes.Windows
+	case "linux":
+		return gameExes.Linux
+	case "darwin":
+		return gameExes.Darwin
+	default:
+		return gameExes.Linux // По умолчанию используем Linux версию
+	}
+}
+
+// getExecutableName - устаревшая функция, оставлена для совместимости
 func getExecutableName(baseName string) string {
 	if runtime.GOOS == "windows" {
 		return baseName + ".exe"
@@ -22,21 +37,28 @@ func runExecution(path string) error {
 	return cmd.Start()
 }
 
+// TryRunGame пытается запустить игру
 func TryRunGame(dataDir string) {
 	fmt.Print("Запуск игры...\n")
-	gameFilePath := filepath.Join(dataDir, getExecutableName(GameFileName))
-	if _, err := os.Stat(gameFilePath); err == nil {
-		err := runExecution(gameFilePath)
+
+	// Получаем имя исполняемого файла для текущей платформы
+	gameFile := GetExecutableForPlatform(GameExes)
+	gamePath := filepath.Join(dataDir, gameFile)
+
+	// Проверяем существование файла и запускаем игру
+	if _, err := os.Stat(gamePath); err == nil {
+		err := runExecution(gamePath)
 		if err != nil {
 			ShowStyledMessage(Error, "Ошибка при запуске игры: "+err.Error())
 			return
 		}
-	} else {
-		ShowStyledMessage(Error, "Файл игры не найден: "+gameFilePath)
+		fmt.Printf("Игра запущена: %s\n", filepath.Base(gamePath))
+		os.Exit(0)
 		return
 	}
-	fmt.Println("Игра запущена")
-	os.Exit(0)
+
+	// Если файл не найден, показываем ошибку
+	ShowStyledMessage(Error, fmt.Sprintf("Исполняемый файл игры не найден: %s", gamePath))
 }
 
 func GetGameDirPath(launcherPath string) string {

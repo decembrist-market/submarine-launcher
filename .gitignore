@@ -10,4 +10,5 @@
 /.idea/.gitignore
 /.idea
 /debug
-/export/
+/export/*
+/SubmarineGame
