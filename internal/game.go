@@ -8,7 +8,7 @@ import (
 )
 
 func runExecution(path string) error {
-	cmd := exec.Command(path)
+	cmd := exec.Command(path, "-launcher")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
