@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
+	"runtime"
 )
 
 // DownloadLauncherUpdate скачивает новую версию лаунчера
@@ -43,8 +43,13 @@ func DownloadLauncherUpdate(tempPath string) error {
 func UpdateLauncher(currentLauncherPath string) error {
 	// Создаем временное имя для нового лаунчера
 	dir := filepath.Dir(currentLauncherPath)
-	tempLauncherPath := filepath.Join(dir, "SubmarineLauncher_new.exe")
-	oldLauncherPath := filepath.Join(dir, "SubmarineLauncher_old.exe")
+	ext := ""
+	if runtime.GOOS == "windows" {
+		ext = ".exe"
+	}
+
+	tempLauncherPath := filepath.Join(dir, "SubmarineLauncher_new"+ext)
+	oldLauncherPath := filepath.Join(dir, "SubmarineLauncher_old"+ext)
 
 	// Скачиваем новую версию
 	err := DownloadLauncherUpdate(tempLauncherPath)
@@ -52,9 +57,13 @@ func UpdateLauncher(currentLauncherPath string) error {
 		return err
 	}
 
-	// Создаем batch-скрипт для замены файлов
-	batchPath := filepath.Join(dir, "update_launcher.bat")
-	batchContent := fmt.Sprintf(`@echo off
+	// Создаем скрипт для замены файлов в зависимости от ОС
+	var scriptPath string
+	var scriptContent string
+
+	if runtime.GOOS == "windows" {
+		scriptPath = filepath.Join(dir, "update_launcher.bat")
+		scriptContent = fmt.Sprintf(`@echo off
 timeout /t 2 /nobreak >nul
 move "%s" "%s"
 move "%s" "%s"
@@ -62,8 +71,19 @@ del "%s"
 start "" "%s"
 del "%%~f0"
 `, currentLauncherPath, oldLauncherPath, tempLauncherPath, currentLauncherPath, oldLauncherPath, currentLauncherPath)
+	} else {
+		scriptPath = filepath.Join(dir, "update_launcher.sh")
+		scriptContent = fmt.Sprintf(`#!/bin/bash
+sleep 2
+mv "%s" "%s"
+mv "%s" "%s"
+rm "%s"
+"%s" &
+rm "$0"
+`, currentLauncherPath, oldLauncherPath, tempLauncherPath, currentLauncherPath, oldLauncherPath, currentLauncherPath)
+	}
 
-	err = os.WriteFile(batchPath, []byte(batchContent), 0755)
+	err = os.WriteFile(scriptPath, []byte(scriptContent), 0755)
 	if err != nil {
 		os.Remove(tempLauncherPath) // Очищаем за собой
 		return fmt.Errorf("ошибка при создании скрипта обновления: %v", err)
@@ -71,16 +91,18 @@ del "%%~f0"
 
 	ShowStyledMessage(Info, "Запускаю обновление лаунчера...")
 
-	// Запускаем batch-скрипт и завершаем текущий процесс
-	cmd := exec.Command("cmd", "/c", batchPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: 0x00000008, // DETACHED_PROCESS
+	// Запускаем скрипт в зависимости от ОС
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", scriptPath)
+	} else {
+		cmd = exec.Command("sh", scriptPath)
 	}
 
 	err = cmd.Start()
 	if err != nil {
 		os.Remove(tempLauncherPath)
-		os.Remove(batchPath)
+		os.Remove(scriptPath)
 		return fmt.Errorf("ошибка при запуске скрипта обновления: %v", err)
 	}
 
