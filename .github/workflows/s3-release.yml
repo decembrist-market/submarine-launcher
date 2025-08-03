@@ -28,6 +28,41 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Extract launcher version
+        id: version
+        run: |
+          VERSION=$(grep 'LauncherVersion.*=' internal/config.go | sed 's/.*"\(.*\)".*/\1/')
+          echo "launcher_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Launcher version: $VERSION"
+
+      - name: Check if tag already exists
+        run: |
+          TAG_NAME="v${{ steps.version.outputs.launcher_version }}"
+          echo "Checking if tag $TAG_NAME already exists..."
+          
+          # Проверяем локальные тэги
+          if git tag -l | grep -q "^$TAG_NAME$"; then
+            echo "ERROR: Tag $TAG_NAME already exists locally!"
+            exit 1
+          fi
+          
+          # Проверяем удаленные тэги
+          git fetch --tags
+          if git tag -l | grep -q "^$TAG_NAME$"; then
+            echo "ERROR: Tag $TAG_NAME already exists in remote repository!"
+            echo "Please increment the LauncherVersion in internal/config.go"
+            exit 1
+          fi
+          
+          echo "Tag $TAG_NAME does not exist. Proceeding with build..."
+
+      - name: Create and push tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "v${{ steps.version.outputs.launcher_version }}" -m "Release version ${{ steps.version.outputs.launcher_version }}"
+          git push origin "v${{ steps.version.outputs.launcher_version }}"
+
       - name: Run tests
         run: go test ./...
 
