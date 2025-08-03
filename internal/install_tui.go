@@ -337,7 +337,7 @@ func RunInstallationTUI(gameDirPath, launcherPath string) error {
 
 	installModel := finalModel.(InstallModel)
 	if installModel.HasError() {
-		return fmt.Errorf(installModel.GetError())
+		return fmt.Errorf("installation failed: %s", installModel.GetError())
 	}
 
 	return nil

@@ -269,7 +269,7 @@ func RunUpdateTUI(gameDirPath, launcherPath string) error {
 
 	updateModel := finalModel.(UpdateModel)
 	if updateModel.HasError() {
-		return fmt.Errorf(updateModel.GetError())
+		return fmt.Errorf("update failed: %s", updateModel.GetError())
 	}
 
 	return nil
