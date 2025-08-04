@@ -74,7 +74,15 @@ func main() {
 			if err != nil {
 				internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления, запускаем игру...")
 			} else {
-				needsUpdate = localVersion != manifest.Version.Game
+				// Используем семантическое сравнение версий
+				isNewer, err := internal.IsVersionNewer(localVersion, manifest.Version.Game)
+				if err != nil {
+					// Если не удалось сравнить версии семантически, используем строковое сравнение
+					internal.ShowStyledMessage(internal.Warn, "Не удалось сравнить версии семантически: "+err.Error())
+					needsUpdate = localVersion != manifest.Version.Game
+				} else {
+					needsUpdate = isNewer
+				}
 			}
 		}
 

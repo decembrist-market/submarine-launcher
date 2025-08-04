@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 func runExecution(path string) error {
@@ -23,8 +24,16 @@ func TryRunGame(dataDir string) {
 	gameFile := GetExecutableForPlatform()
 	gamePath := filepath.Join(dataDir, gameFile)
 
-	// Проверяем существование файла и запускаем игру
+	// Проверяем существование файла
 	if _, err := os.Stat(gamePath); err == nil {
+		// На Unix-системах устанавливаем права на выполнение
+		if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
+			if err := os.Chmod(gamePath, 0755); err != nil {
+				ShowStyledMessage(Error, "Ошибка при установке прав на выполнение: "+err.Error())
+				return
+			}
+		}
+
 		err := runExecution(gamePath)
 		if err != nil {
 			ShowStyledMessage(Error, "Ошибка при запуске игры: "+err.Error())
