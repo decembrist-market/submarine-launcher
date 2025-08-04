@@ -23,11 +23,11 @@ func main() {
 	}
 
 	// Проверяем обновления лаунчера в первую очередь
-	remoteVersionInfo, err := internal.GetRemoteVersionInfo()
+	manifest, err := internal.GetRemoteManifest()
 	if err != nil {
 		internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления лаунчера: "+err.Error())
-	} else if internal.NeedsLauncherUpdate(remoteVersionInfo) {
-		internal.ShowStyledMessage(internal.Info, fmt.Sprintf("Найдено обновление лаунчера: %s → %s", internal.LauncherVersion, remoteVersionInfo.Version.Launcher))
+	} else if internal.NeedsLauncherUpdate(manifest) {
+		internal.ShowStyledMessage(internal.Info, fmt.Sprintf("Найдено обновление лаунчера: %s → %s", internal.LauncherVersion, manifest.Version.Launcher))
 		err = internal.UpdateLauncher(launcherPath)
 		if err != nil {
 			internal.ShowExitMessage(internal.Error, "Ошибка при обновлении лаунчера: "+err.Error())
@@ -41,7 +41,7 @@ func main() {
 	// Основной цикл лаунчера
 	for {
 		// Проверяем наличие игры
-		localVersionPath := filepath.Join(gameDirPath, internal.VersionFileName)
+		localGameVersionPath := filepath.Join(gameDirPath, internal.GameVersionFileName)
 		gameDirExist := true
 		gameInstalled := true
 		needsUpdate := false
@@ -55,7 +55,7 @@ func main() {
 		}
 
 		if gameDirExist {
-			if _, err := os.Stat(localVersionPath); os.IsNotExist(err) {
+			if _, err := os.Stat(localGameVersionPath); os.IsNotExist(err) {
 				gameInstalled = false
 			} else if err != nil {
 				internal.ShowExitMessage(internal.Error, "Ошибка при проверке версии игры: "+err.Error())
@@ -65,7 +65,7 @@ func main() {
 
 		// Если игра установлена, проверяем обновления
 		if gameInstalled {
-			localVersionInfo, err := internal.GetLocalVersionInfo(localVersionPath)
+			localVersion, err := internal.GetGameLocalVersion(localGameVersionPath)
 			if err != nil {
 				internal.ShowExitMessage(internal.Error, "Ошибка при чтении файла с версией: "+err.Error())
 				return
@@ -74,12 +74,12 @@ func main() {
 			if err != nil {
 				internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления, запускаем игру...")
 			} else {
-				needsUpdate = internal.NeedsGameUpdate(localVersionInfo, remoteVersionInfo)
+				needsUpdate = localVersion != manifest.Version.Game
 			}
 		}
 
 		// Создаем и запускаем TUI модель
-		model := internal.NewTUIModel(gameInstalled, needsUpdate)
+		model := internal.NewTUIModel(gameInstalled, needsUpdate, manifest)
 		p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 
 		finalModel, err := p.Run()
@@ -96,6 +96,15 @@ func main() {
 		choice := tuiModel.GetChoice()
 
 		shouldExit := false
+
+		// Проверяем доступность игры перед выполнением действий
+		if manifest != nil && !internal.IsGameAccessible(manifest) {
+			// Если идет техническое обслуживание, блокируем запуск/обновление игры
+			if choice == 0 && (gameInstalled || needsUpdate) {
+				internal.ShowStyledMessage(internal.Error, "Игра недоступна из-за технического обслуживания")
+				continue // Возвращаемся в меню
+			}
+		}
 
 		if !gameInstalled {
 			// Игра не установлена

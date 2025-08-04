@@ -76,13 +76,14 @@ type TUIModel struct {
 	gameInstalled bool
 	needsUpdate   bool
 	status        string
-	statusType    string // Info, Warn, Error, Success
-	width         int    // Ширина терминала
-	height        int    // Высота терминала
-	selected      bool   // Был ли реально выбран пункт меню
+	statusType    string       // Info, Warn, Error, Success
+	width         int          // Ширина терминала
+	height        int          // Высота терминала
+	selected      bool         // Был ли реально выбран пункт меню
+	manifest      *ManifestDto // Информация о версии для отображения уведомлений
 }
 
-func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
+func NewTUIModel(gameInstalled, needsUpdate bool, manifestDto *ManifestDto) TUIModel {
 	choices := []string{"🎮 Запустить игру", "🚪 Выход"}
 
 	if !gameInstalled {
@@ -98,8 +99,9 @@ func NewTUIModel(gameInstalled, needsUpdate bool) TUIModel {
 		needsUpdate:   needsUpdate,
 		status:        "",
 		statusType:    Info,
-		width:         80, // Значение по умолчанию
-		height:        24, // Значение по умолчанию
+		width:         80,          // Значение по умолчанию
+		height:        24,          // Значение по умолчанию
+		manifest:      manifestDto, // Будет установлено позже
 	}
 }
 
@@ -146,6 +148,39 @@ func (m TUIModel) View() string {
 
 	// Добавляем логотип
 	content += logoStyle.Width(m.width).Render(logo) + "\n\n"
+
+	// Отображаем уведомления о техническом обслуживании и серверные сообщения
+	if m.manifest != nil {
+		// Проверяем техническое обслуживание
+		maintenanceMsg, maintenanceType := GetMaintenanceMessage(m.manifest)
+		if maintenanceMsg != "" {
+			var styledMaintenanceMsg string
+			if maintenanceType == Error {
+				styledMaintenanceMsg = errorStyle.Render("🔧 " + maintenanceMsg)
+			} else {
+				styledMaintenanceMsg = lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#FFD43B")).
+					Bold(true).
+					Render("⚠️  " + maintenanceMsg)
+			}
+			content += lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(styledMaintenanceMsg) + "\n\n"
+		}
+
+		// Проверяем серверные сообщения
+		serverMsg, serverMsgType := GetServerMessage(m.manifest)
+		if serverMsg != "" {
+			var styledServerMsg string
+			if serverMsgType == Error {
+				styledServerMsg = errorStyle.Render("📢 " + serverMsg)
+			} else {
+				styledServerMsg = lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#FFD43B")).
+					Bold(true).
+					Render("📢 " + serverMsg)
+			}
+			content += lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Render(styledServerMsg) + "\n\n"
+		}
+	}
 
 	// Статус (показываем только если есть сообщение)
 	if m.status != "" {

@@ -1,0 +1,118 @@
+﻿name: Deploy Launcher Manifest to S3
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deploy even if manifest unchanged'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-manifest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if manifest file changed or force deploy
+        id: manifest-check
+        run: |
+          if [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
+            echo "manifest_changed=true" >> $GITHUB_OUTPUT
+            echo "Force deploy enabled - will deploy regardless of changes"
+          elif git diff --name-only HEAD~1 HEAD | grep -q "^launcher-manifest.yaml$"; then
+            echo "manifest_changed=true" >> $GITHUB_OUTPUT
+            echo "launcher-manifest.yaml has been modified"
+          else
+            echo "manifest_changed=false" >> $GITHUB_OUTPUT
+            echo "launcher-manifest.yaml has not been modified and force deploy is disabled"
+          fi
+
+      # Установка старой проверенной версии AWS CLI (7 месяцев назад)
+      - name: Install AWS CLI (stable old version)
+        if: steps.manifest-check.outputs.manifest_changed == 'true'
+        run: |
+          echo "Installing stable AWS CLI version from 7 months ago..."
+          
+          # Полностью удаляем новые версии
+          sudo rm -rf /usr/local/aws-cli || true
+          sudo rm -f /usr/local/bin/aws || true
+          sudo rm -f /usr/local/bin/aws_completer || true
+          
+          # Устанавливаем проверенную версию 2.15.30 (июль 2024)
+          sudo apt update
+          sudo apt install -y unzip curl
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.15.30.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          
+          echo "Installed AWS CLI version:"
+          /usr/local/bin/aws --version
+
+      # Настройка AWS CLI для Timeweb S3 с отключением multipart
+      - name: Configure AWS CLI for Timeweb S3
+        if: steps.manifest-check.outputs.manifest_changed == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+        run: |
+          # Создаем директорию .aws
+          mkdir -p ~/.aws
+          
+          # Создаем файл credentials
+          cat > ~/.aws/credentials << EOF
+          [default]
+          aws_access_key_id = $AWS_ACCESS_KEY_ID
+          aws_secret_access_key = $AWS_SECRET_ACCESS_KEY
+          EOF
+          
+          # Создаем файл config с отключенным multipart
+          cat > ~/.aws/config << EOF
+          [default]
+          region = ru-1
+          output = json
+          s3 =
+              multipart_threshold = 100MB
+              multipart_chunksize = 16MB
+              max_concurrent_requests = 1
+              max_bandwidth = 100MB/s
+          EOF
+          
+          echo "AWS CLI configured for Timeweb S3 with multipart disabled"
+
+      # Тестируем подключение
+      - name: Test S3 connection
+        if: steps.manifest-check.outputs.manifest_changed == 'true'
+        run: |
+          echo "Testing connection to Timeweb S3..."
+          /usr/local/bin/aws s3 ls s3://${{ secrets.S3_BUCKET_NAME }} --endpoint-url ${{ secrets.S3_ENDPOINT_URL }} || echo "Connection test failed, but continuing..."
+
+      - name: Upload manifest to S3
+        if: steps.manifest-check.outputs.manifest_changed == 'true'
+        run: |
+          echo "Uploading launcher-manifest.yaml to S3 submarine-game folder..."
+          /usr/local/bin/aws s3 cp launcher-manifest.yaml \
+            s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/launcher-manifest.yaml \
+            --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+          echo "Manifest successfully uploaded to S3"
+
+      - name: Verify upload
+        if: steps.manifest-check.outputs.manifest_changed == 'true'
+        run: |
+          echo "Verifying uploaded manifest..."
+          /usr/local/bin/aws s3 ls s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/launcher-manifest.yaml --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+          echo "Upload verification completed"
+
+      - name: Clean up
+        if: always()
+        run: |
+          # Очищаем credentials для безопасности
+          rm -rf ~/.aws

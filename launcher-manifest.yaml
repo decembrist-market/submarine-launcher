@@ -1,0 +1,9 @@
+﻿version:
+  game: 0.0.1-alpha
+  launcher: 0.0.1
+
+shutdown: null
+
+message:
+  text: null
+  important: false
