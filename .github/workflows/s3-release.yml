@@ -97,6 +97,11 @@ jobs:
           echo "Building for macOS..."
           go build -o SubmarineLauncher-macos .
 
+      - name: Set executable permissions for macOS
+        run: |
+          echo "Setting executable permissions for macOS binary..."
+          chmod +x SubmarineLauncher-macos
+
       # Установка старой проверенной версии AWS CLI (7 месяцев назад)
       - name: Install AWS CLI (stable old version)
         run: |

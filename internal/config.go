@@ -15,7 +15,7 @@ type DownloadURLs struct {
 }
 
 var (
-	LauncherVersion     = "0.0.5"
+	LauncherVersion     = "0.0.6"
 	GameFolderName      = "SubmarineGame"
 	RemoteManifestURL   = "https://static.decembrist.org/submarine-game/launcher-manifest.yaml"
 	GameVersionFileName = "version.yaml"
