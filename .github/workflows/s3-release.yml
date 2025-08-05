@@ -97,11 +97,6 @@ jobs:
           echo "Building for macOS..."
           go build -o SubmarineLauncher-macos .
 
-      - name: Set executable permissions for macOS
-        run: |
-          echo "Setting executable permissions for macOS binary..."
-          chmod +x SubmarineLauncher-macos
-
       # Установка старой проверенной версии AWS CLI (7 месяцев назад)
       - name: Install AWS CLI (stable old version)
         run: |
@@ -173,6 +168,7 @@ jobs:
           /usr/local/bin/aws s3 cp SubmarineLauncher \
             s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/linux/SubmarineLauncher \
             --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+            --metadata "file-permissions=755"
 
       # Загрузка macOS версии
       - name: Upload macOS version to S3
@@ -181,6 +177,7 @@ jobs:
           /usr/local/bin/aws s3 cp SubmarineLauncher-macos \
             s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/macos/SubmarineLauncher \
             --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+            --metadata "file-permissions=755"
 
       - name: Verify uploads
         run: |
