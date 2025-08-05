@@ -10,9 +10,12 @@ permissions:
   actions: read
 
 jobs:
-  build-and-deploy:
+  # Первый job для проверки версии и тестов
+  prepare:
     runs-on: ubuntu-latest
-
+    outputs:
+      launcher_version: ${{ steps.version.outputs.launcher_version }}
+      tag_name: ${{ steps.version.outputs.tag_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,12 +42,15 @@ jobs:
         id: version
         run: |
           VERSION=$(grep 'LauncherVersion.*=' internal/config.go | sed 's/.*"\(.*\)".*/\1/')
+          TAG_NAME="v$VERSION"
           echo "launcher_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Launcher version: $VERSION"
+          echo "Tag name: $TAG_NAME"
 
       - name: Check if tag already exists
         run: |
-          TAG_NAME="v${{ steps.version.outputs.launcher_version }}"
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
           echo "Checking if tag $TAG_NAME already exists..."
           
           # Проверяем локальные тэги
@@ -63,39 +69,78 @@ jobs:
           
           echo "Tag $TAG_NAME does not exist. Proceeding with build..."
 
-      - name: Create and push tag
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a "v${{ steps.version.outputs.launcher_version }}" -m "Release version ${{ steps.version.outputs.launcher_version }}"
-          git push origin "v${{ steps.version.outputs.launcher_version }}"
-
       - name: Run tests
         run: go test ./...
 
-      - name: Build for Windows
-        env:
-          GOOS: windows
-          GOARCH: amd64
-        run: |
-          echo "Building for Windows..."
-          go build -o SubmarineLauncher.exe .
+  # Параллельная сборка для разных платформ
+  build:
+    needs: prepare
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            output: SubmarineLauncher.exe
+            platform: windows
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            output: SubmarineLauncher
+            platform: linux
+          - os: ubuntu-latest
+            goos: darwin
+            goarch: amd64
+            output: SubmarineLauncher-macos
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Build for Linux
-        env:
-          GOOS: linux
-          GOARCH: amd64
-        run: |
-          echo "Building for Linux..."
-          go build -o SubmarineLauncher .
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
 
-      - name: Build for macOS
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build for ${{ matrix.platform }}
         env:
-          GOOS: darwin
-          GOARCH: amd64
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          echo "Building for macOS..."
-          go build -o SubmarineLauncher-macos .
+          echo "Building for ${{ matrix.platform }}..."
+          go build -o ${{ matrix.output }} .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-binary
+          path: ${{ matrix.output }}
+          retention-days: 1
+
+  # Job для развертывания в S3
+  deploy:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find . -name "*" -type f
+          ls -la */
 
       # Установка старой проверенной версии AWS CLI (7 месяцев назад)
       - name: Install AWS CLI (stable old version)
@@ -157,7 +202,7 @@ jobs:
       - name: Upload Windows version to S3
         run: |
           echo "Uploading Windows SubmarineLauncher.exe to S3..."
-          /usr/local/bin/aws s3 cp SubmarineLauncher.exe \
+          /usr/local/bin/aws s3 cp windows-binary/SubmarineLauncher.exe \
             s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/windows/SubmarineLauncher.exe \
             --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
 
@@ -165,18 +210,18 @@ jobs:
       - name: Upload Linux version to S3
         run: |
           echo "Uploading Linux SubmarineLauncher to S3..."
-          /usr/local/bin/aws s3 cp SubmarineLauncher \
+          /usr/local/bin/aws s3 cp linux-binary/SubmarineLauncher \
             s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/linux/SubmarineLauncher \
-            --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+            --endpoint-url ${{ secrets.S3_ENDPOINT_URL }} \
             --metadata "file-permissions=755"
 
       # Загрузка macOS версии
       - name: Upload macOS version to S3
         run: |
           echo "Uploading macOS SubmarineLauncher to S3..."
-          /usr/local/bin/aws s3 cp SubmarineLauncher-macos \
+          /usr/local/bin/aws s3 cp macos-binary/SubmarineLauncher-macos \
             s3://${{ secrets.S3_BUCKET_NAME }}/submarine-game/macos/SubmarineLauncher \
-            --endpoint-url ${{ secrets.S3_ENDPOINT_URL }}
+            --endpoint-url ${{ secrets.S3_ENDPOINT_URL }} \
             --metadata "file-permissions=755"
 
       - name: Verify uploads
@@ -191,5 +236,22 @@ jobs:
         run: |
           # Очищаем credentials для безопасности
           rm -rf ~/.aws
-          # Удаляем собранные файлы
-          rm -f SubmarineLauncher.exe SubmarineLauncher SubmarineLauncher-macos
+
+  # Создание тэга после успешного развертывания
+  create-tag:
+    needs: [prepare, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push tag
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "${{ needs.prepare.outputs.tag_name }}" -m "Release version ${{ needs.prepare.outputs.launcher_version }}"
+          git push origin "${{ needs.prepare.outputs.tag_name }}"
+          echo "Successfully created and pushed tag ${{ needs.prepare.outputs.tag_name }}"
