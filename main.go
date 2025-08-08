@@ -140,8 +140,12 @@ func main() {
 					continue
 				}
 				// После успешного обновления запускаем игру
-				internal.TryRunGame(gameDirPath)
-				shouldExit = true
+				err = internal.TryRunGame(gameDirPath)
+				if err != nil {
+					internal.ShowStyledMessage(internal.Error, "Ошибка при запуске игры: "+err.Error())
+				}
+				// Возвращаемся в меню после завершения игры
+				continue
 			case 1: // Выход
 				shouldExit = true
 			}
@@ -149,8 +153,12 @@ func main() {
 			// Игра установлена и актуальна
 			switch choice {
 			case 0: // Запустить игру
-				internal.TryRunGame(gameDirPath)
-				shouldExit = true
+				err = internal.TryRunGame(gameDirPath)
+				if err != nil {
+					internal.ShowStyledMessage(internal.Error, "Ошибка при запуске игры: "+err.Error())
+				}
+				// Возвращаемся в меню после завершения игры
+				continue
 			case 1: // Выход
 				shouldExit = true
 			}
