@@ -28,12 +28,14 @@ func main() {
 		internal.ShowStyledMessage(internal.Warn, "Не удалось проверить обновления лаунчера: "+err.Error())
 	} else if internal.NeedsLauncherUpdate(manifest) {
 		internal.ShowStyledMessage(internal.Info, fmt.Sprintf("Найдено обновление лаунчера: %s → %s", internal.LauncherVersion, manifest.Version.Launcher))
-		err = internal.UpdateLauncher(launcherPath)
+
+		// Запускаем красивый TUI для обновления лаунчера
+		err = internal.RunLauncherUpdateTUI(launcherPath)
 		if err != nil {
 			internal.ShowExitMessage(internal.Error, "Ошибка при обновлении лаунчера: "+err.Error())
 			return
 		}
-		// UpdateLauncher завершает процесс, поэтому эта строка не выполнится
+		// RunLauncherUpdateTUI завершает процесс, поэтому эта строка не выполнится
 	}
 
 	gameDirPath := internal.GetGameDirPath(launcherPath)
