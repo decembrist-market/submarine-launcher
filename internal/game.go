@@ -86,17 +86,18 @@ func TryRunGame(dataDir string) error {
 		fmt.Fprintf(logFile, "============================\n\n")
 	}
 
-	var logWriter io.Writer = os.Stdout
+	var logger = CreateLogger(os.Stdout)
 	if logFile != nil {
-		logWriter = logFile
+		logger.writer = logFile
 		ShowStyledMessage(Info, fmt.Sprintf("Лог игры записывается в: %s", logPath))
 	}
 
 	ShowStyledMessage(Info, fmt.Sprintf("Игра запущена: %s", filepath.Base(gamePath)))
 
-	err = runExecution(gamePath, logWriter)
+	err = runExecution(gamePath, logger)
 
 	if logFile != nil {
+		logger.FlushRepeat()
 		fmt.Fprintf(logFile, "\n============================\n")
 		fmt.Fprintf(logFile, "=== Лог игры завершен: %s ===\n", time.Now().Format("2006-01-02 15:04:05"))
 	}
