@@ -8,6 +8,12 @@ type GameExecutables struct {
 	Darwin  string
 }
 
+type TtsExecutables struct {
+	Windows string
+	Linux   string
+	Darwin  string
+}
+
 type DownloadURLs struct {
 	Windows string
 	Linux   string
@@ -42,6 +48,12 @@ var (
 		Windows: "submarine.exe",
 		Linux:   "submarine.x86_64",
 		Darwin:  "Submarine Godot.app/Contents/MacOS/Submarine Godot",
+	}
+
+	TtsExes = TtsExecutables{
+		Windows: "tts.exe",
+		Linux:   "tts",
+		Darwin:  "tts",
 	}
 )
 
@@ -94,5 +106,18 @@ func GetExecutableForPlatform() string {
 		return GameExes.Darwin
 	default:
 		return GameExes.Windows
+	}
+}
+
+func GetTtsExecutableForPlatform() string {
+	switch runtime.GOOS {
+	case "windows":
+		return TtsExes.Windows
+	case "linux":
+		return TtsExes.Linux
+	case "darwin":
+		return TtsExes.Darwin
+	default:
+		return TtsExes.Windows
 	}
 }
