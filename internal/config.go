@@ -20,6 +20,13 @@ type DownloadURLs struct {
 	Darwin  string
 }
 
+type DownloadGameURLs struct {
+	Windows string
+	Linux   string
+	DarwinArm64  string
+	DarwinIntel  string
+}
+
 var (
 	LauncherVersion     = "0.0.11"
 	GameFolderName      = "SubmarineGame"
@@ -32,7 +39,7 @@ var (
 		Darwin:  "https://static.decembrist.org/submarine-game/macos/SubmarineLauncher",
 	}
 
-	ArchiveURLs = DownloadURLs{
+	ArchiveURLs = DownloadGameURLs{
 		Windows: "https://static.decembrist.org/submarine-game/windows/submarine.zip",
 		Linux:   "https://static.decembrist.org/submarine-game/linux/submarine.zip",
 		DarwinArm64:  "https://static.decembrist.org/submarine-game/macos-arm64/submarine.zip",
