@@ -47,6 +47,7 @@ func TryRunGame(dataDir string) error {
 	// Получаем имя исполняемого файла для текущей платформы
 	gameFile := GetExecutableForPlatform()
 	gamePath := filepath.Join(dataDir, gameFile)
+	ttsPath := filepath.Join(dataDir, GetTtsExecutableForPlatform())
 
 	// Проверяем существование файла
 	if _, err := os.Stat(gamePath); err != nil {
@@ -59,6 +60,13 @@ func TryRunGame(dataDir string) error {
 		if err := os.Chmod(gamePath, 0755); err != nil {
 			ShowStyledMessage(Error, "Ошибка при установке прав на выполнение: "+err.Error())
 			return err
+		}
+		if _, err := os.Stat(ttsPath); err == nil {
+			if err := os.Chmod(ttsPath, 0755); err != nil {
+				ShowStyledMessage(Warn, "Не удалось установить права на выполнение TTS: "+err.Error())
+			}
+		} else if !os.IsNotExist(err) {
+			ShowStyledMessage(Warn, "Ошибка при проверке TTS: "+err.Error())
 		}
 	}
 
