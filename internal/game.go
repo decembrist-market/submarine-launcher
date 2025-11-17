@@ -55,6 +55,16 @@ func TryRunGame(dataDir string) error {
 		return fmt.Errorf("исполняемый файл игры не найден: %s", gamePath)
 	}
 
+	// На macOS удаляем подпись кода
+	if runtime.GOOS == "darwin" {
+		codesignCmd := exec.Command("codesign", "--remove-signature", gamePath)
+		if err := codesignCmd.Run(); err != nil {
+			ShowStyledMessage(Warn, "Не удалось удалить подпись кода: "+err.Error())
+		} else {
+			ShowStyledMessage(Info, "Подпись кода удалена")
+		}
+	}
+
 	// На Unix-системах устанавливаем права на выполнение
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
 		if err := os.Chmod(gamePath, 0755); err != nil {

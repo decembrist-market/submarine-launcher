@@ -28,7 +28,7 @@ type DownloadGameURLs struct {
 }
 
 var (
-	LauncherVersion     = "0.0.12"
+	LauncherVersion     = "0.0.13"
 	GameFolderName      = "SubmarineGame"
 	RemoteManifestURL   = "https://static.decembrist.org/submarine-game/launcher-manifest.yaml"
 	GameVersionFileName = "version.yaml"
@@ -61,7 +61,7 @@ var (
 	TtsExes = TtsExecutables{
 		Windows: "tts.exe",
 		Linux:   "tts",
-		Darwin:  "tts",
+		Darwin:  "Submarine Godot.app/Contents/MacOS/tts",
 	}
 )
 
