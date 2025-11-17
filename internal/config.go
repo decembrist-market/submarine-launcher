@@ -21,14 +21,14 @@ type DownloadURLs struct {
 }
 
 type DownloadGameURLs struct {
-	Windows string
-	Linux   string
-	DarwinArm64  string
-	DarwinIntel  string
+	Windows     string
+	Linux       string
+	DarwinArm64 string
+	DarwinIntel string
 }
 
 var (
-	LauncherVersion     = "0.0.11"
+	LauncherVersion     = "0.0.12"
 	GameFolderName      = "SubmarineGame"
 	RemoteManifestURL   = "https://static.decembrist.org/submarine-game/launcher-manifest.yaml"
 	GameVersionFileName = "version.yaml"
@@ -40,10 +40,10 @@ var (
 	}
 
 	ArchiveURLs = DownloadGameURLs{
-		Windows: "https://static.decembrist.org/submarine-game/windows/submarine.zip",
-		Linux:   "https://static.decembrist.org/submarine-game/linux/submarine.zip",
-		DarwinArm64:  "https://static.decembrist.org/submarine-game/macos-arm64/submarine.zip",
-		DarwinIntel:  "https://static.decembrist.org/submarine-game/macos-intel/submarine.zip",
+		Windows:     "https://static.decembrist.org/submarine-game/windows/submarine.zip",
+		Linux:       "https://static.decembrist.org/submarine-game/linux/submarine.zip",
+		DarwinArm64: "https://static.decembrist.org/submarine-game/macos-arm64/submarine.zip",
+		DarwinIntel: "https://static.decembrist.org/submarine-game/macos-intel/submarine.zip",
 	}
 
 	HashURLs = DownloadURLs{
