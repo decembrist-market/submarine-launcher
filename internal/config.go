@@ -29,7 +29,8 @@ var (
 	ArchiveURLs = DownloadURLs{
 		Windows: "https://static.decembrist.org/submarine-game/windows/submarine.zip",
 		Linux:   "https://static.decembrist.org/submarine-game/linux/submarine.zip",
-		Darwin:  "https://static.decembrist.org/submarine-game/macos/submarine.zip",
+		DarwinArm64:  "https://static.decembrist.org/submarine-game/macos-arm64/submarine.zip",
+		DarwinIntel:  "https://static.decembrist.org/submarine-game/macos-intel/submarine.zip",
 	}
 
 	HashURLs = DownloadURLs{
@@ -65,7 +66,10 @@ func GetArchiveURL() string {
 	case "linux":
 		return ArchiveURLs.Linux
 	case "darwin":
-		return ArchiveURLs.Darwin
+		if runtime.GOARCH == "arm64" {
+			return ArchiveURLs.DarwinArm64
+		}
+		return ArchiveURLs.DarwinIntel
 	default:
 		return ArchiveURLs.Windows // fallback
 	}
